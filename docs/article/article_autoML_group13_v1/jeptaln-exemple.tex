@@ -1,0 +1,463 @@
+%% Exemple de source LaTeX pour un article soumis à JEP-TALN 2024
+\documentclass[10pt,twoside]{article}
+
+\usepackage{times}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+
+\usepackage{jeptaln2024}
+\usepackage[french]{babel}
+
+% Titre complet
+\title{Challenge Auto-ML (G13)}
+
+\author{Maelig Pesantez\up{1}\quad Kilian Pousse\up{1}\quad Arab Belamri\up{1}\\
+  {\small
+    (1) Le Mans Université, Avenue Olivier Messiaen, 72000 Le Mans, France \\
+    \texttt{
+          \{maelig.pesantez.etu, kilian.pousse.etu, arab.belamri.etu\}@univ-lemans.fr \\ 
+}}}
+
+\begin{document}
+\maketitle
+
+\resume{
+Ce travail présente le package AutoML, développé dans le cadre des modules Méthodologie pour l’Intelligence Artificielle, Méthodes Classiques pour l’Intelligence Artificielle et DevOps du Master 1 Informatique, spécialité Intelligence Artificielle à l’Université du Mans.
+L’objectif de ce projet est de concevoir un outil Python capable d’automatiser les étapes clés d’un processus d’apprentissage automatique : prétraitement des données, sélection et entraînement de modèle  et évaluation des performances.
+Nous avons mis l’accent sur la reproductibilité expérimentale, la modularité du pipeline et la fiabilité des métriques produites.
+Cet article décrit l’architecture du système, les choix méthodologiques retenus ainsi que les résultats obtenus sur plusieurs jeux de données variés, afin d’évaluer la robustesse et la généricité de notre approche AutoML.
+}
+
+\abstract{Auto-ML challenge}{
+  This work presents AutoML, a Python package developed as part of the Artificial Intelligence Methodology, Classical AI Methods, and DevOps courses of the Master’s in Computer Science – Artificial Intelligence track at Le Mans University.
+The project aims to design a Python tool that automates key stages of a machine learning workflow, including data preprocessing, model selection and training, and performance evaluation.
+We emphasize experimental reproducibility, pipeline modularity, and the reliability of the generated metrics.
+This paper outlines the system architecture, discusses the methodological choices, and reports results obtained on multiple datasets to assess the robustness and generalization capacity of our AutoML approach.
+}
+
+\motsClefs
+  {Auto-ML, Aprentissage automatique, flux de traitement, classification, regression }
+  {Auto-ML, Machine Learning, pipeline, classification, regression}
+  
+% \paragraph{Rappels importants}
+% \begin{itemize}
+% \item Le style bibliographique tient compte des champs \verb!doi! et \verb!hal_id!. Des exemples sont donnés dans la bibliographie~\cite{pereira-warren:1983,Bernhard07,tellier:2008}. Voir également le fichier \verb!biblio.bib! fourni.
+% \item Le \emph{package} \verb!hyperref! est chargé automatiquement par le fichier de style \verb!jeptaln2024.sty!. Certains \emph{packages} particuliers doivent être donc chargés avant, certains après, suivant les compatibilités avec \verb!hyperref! (voir les \href{http://distrib-coffee.ipsl.jussieu.fr/pub/mirrors/ctan/macros/latex/contrib/hyperref/doc/manual.html#x1-520009}{compatibilités dans la documentation}).
+% \item Si vous utilisez les symboles utf-8 pour les guillements français, ne
+% pas oublier les espaces insécables \verb!~! après les guillemets
+% ouvrants ou avant les guillements fermants : « test »
+% (\verb!«~test~»!). Sinon, vous pouvez utiliser les commandes
+% \verb!\og!  et \verb!\fg! : \og test \fg{} (\verb!\og test \fg{}!).
+% \item Exemple d'utilisation des nombres décimaux, afin d'éviter le
+% placement d'un espace insécable: \verb!$1,2$! \verb!$1.2$! ou \verb!$\num{1,2}$! \verb!$1{,}2$!,
+% ou encore \verb!$\num{1.2}$! \verb!\num{1,2}!.
+% \item Lorsque vous citez un article disponible sur arXiv, pensez à
+% vérifier si cet article est une pré-publication (\verb!@misc!) ou a
+% déjà été publié (\verb!@inproceedings! ou \verb!@article! ou
+% autre). Dans tous les cas, il est possible de mettre un lien dans
+% l'entrée bibliographique, par exemple en utilisant le champ note~:
+% \verb!note = "arXiv~: \href{https://arxiv.org/abs/NNN.MMM}{NNN.MMM}"!
+% \item Il peut aussi y avoir (très très rarement) des problèmes à la
+% compilation lorsqu'une url s'étend sur deux pages. Une solution,
+% dans ce cas, est de compiler avec l'option \verb!draft! ajoutée à
+% la commande \verb!\documentclass[10pt,twoside]{article}! pour que
+% la position soit correctement calculée, puis sans l'option pour
+% que le lien devienne cliquable.
+% \end{itemize}
+
+
+%%================================================================
+
+\section*{Challenge Auto-ML 2025}
+
+Dans le cadre du challenge Auto-ML 2025 de l'Université Du Mans déstiné aux étudiants de première année du master informatique spécialité IA, nous avons eu l'occasion de concevoir un module python Auto-ML en groupe de trois étudiants. Nous détaillons ici les choix de conception que nous avons étés ammenés à faire concernant l'intégralité du pipeline de traitement. 
+
+Quelques informations sur les données que nous avons étés ammenés à traiter: les enseignant ont mis à notre disposition onze datasets de deux types, csv classique et dataset sparse. Pour chacun de ses datasets, deux types de modèles étaient applicables: les régressions et les classifications, pour certaines mutli-output.
+
+Concernant les limites du package, celui-ci doit être éxécutable uniquement via CPU, fermant directement la porte à l'utilisation des GPUs et des bibliothèques correspondantes: pytorch, cuda...
+Nous avions en revanche l'autorisation d'utiliser des packages CPU du domaine ML comme sklearn.
+
+\section*{Introduction}
+
+L'apprentissage automatique (\textit{Machine Learning}) s'est imposé ces dernières années comme une technologie incontournable pour l'analyse de données complexes et la prise de décision automatisée. Cependant, la conception de modèles performants demeure une tâche experte, itérative et coûteuse en temps. Le processus traditionnel implique de nombreuses étapes manuelles, allant du pré-traitement des données à la sélection de l'algorithme adéquat, en passant par l'optimisation fine des hyperparamètres. Cette complexité constitue souvent un frein à l'adoption rapide et généralisée des solutions d'intelligence artificielle.
+
+C'est dans ce cadre qu'émerge le concept d'apprentissage automatique automatisé, ou \textit{AutoML} (\textit{Automated Machine Learning}). L'AutoML vise à retirer cette complexité en automatisant l'intégralité du pipeline de modélisation, permettant ainsi de produire des modèles robustes avec une intervention humaine minimale.
+
+Ce rapport présente les travaux réalisés dans le cadre du projet commun \og Méthodologie IA et méthodes classiques \fg{}. L'objectif principal était de concevoir et de développer un pipeline AutoML complet, capable d'ingérer des jeux de données variés, d'entraîner et de sélectionner les meilleurs modèles, et de fournir des prédictions fiables de manière autonome. Nous détaillerons dans ce document l'architecture logicielle retenue, les choix méthodologiques effectués pour l'optimisation des hyperparamètres sur le cluster de calcul \textit{Skinner}, ainsi que l'évaluation des performances de notre solution face à des capacités de généralisation exigées par le challenge.
+
+\section{Contexte du Projet}
+
+Le projet s'inscrit dans un challenge de \textit{Machine Learning} visant à simuler un environnement de production où l'efficacité, la robustesse et l'automatisation sont primordiales. Cette section détaille les enjeux conceptuels de l'AutoML ainsi que les contraintes techniques et opérationnelles spécifiques à cette étude.
+
+\subsection{Le Paradigme AutoML}
+
+L’AutoML vise avant tout à automatiser les étapes traditionnellement réalisées par essais successifs, en les confiant à des procédures algorithmiques structurées., le système développé doit être capable de prendre en entrée des données brutes et de délivrer en sortie des prédictions, en automatisant les phases intermédiaires critiques :
+
+\begin{itemize}
+    \item \textbf{Prétraitement des données} : nettoyage, normalisation et séparation des jeux de données (\textit{train/validation/test}).
+    \item \textbf{Sélection de modèle} : exploration de différentes familles d'algorithmes via la librairie \textit{scikit-learn}.
+    \item \textbf{Optimisation des hyperparamètres} : recherche de la configuration optimale pour chaque jeu de données spécifique.
+    \item \textbf{Évaluation} : utilisation de métriques adaptées pour valider la pertinence des modèles retenus.
+\end{itemize}
+
+Cette automatisation vise à réduire les biais humains potentiels et à garantir une reproductibilité stricte des résultats.
+
+\subsection{Environnement Technique et Infrastructure}
+
+La dimension computationnelle du projet impose l'utilisation d'une infrastructure de calcul haute performance (\textit{High Performance Computing}, HPC). Le développement et les entraînements sont réalisés sur le cluster étudiant \textit{Skinner}. L'usage de ce cluster répond à la nécessité de traiter des volumes de données conséquents et d'exécuter des algorithmes d'optimisation coûteux en ressources.
+
+Le pipeline doit respecter une interface utilisateur minimale et standardisée (par exemple : \texttt{automl.fit()}, \texttt{automl.eval()}), facilitant son utilisation par des tiers. De plus, une contrainte forte de généralisation est imposée : le système est développé sur un corpus de données initial (situé dans \texttt{/info/corpus/ChallengeMachineLearning}), mais doit être suffisamment robuste pour performer sur de nouvelles données ajoutées ultérieurement, inconnues lors de la phase de conception.
+
+\subsection{Cadre Organisationnel et Livrables}
+
+Ce projet ne se limite pas à la performance algorithmique ; il intègre également des exigences de génie logiciel strictes en prévision d'une réutilisation future dans le cadre du module \textit{DevOps}. Le code doit être modulaire, lisible et packagé sous forme de librairie Python facilement installable.
+
+Le travail est mené de manière collaborative via un gestionnaire de version (\textit{GitHub}), impliquant l'usage de bonnes pratiques telles que la gestion de branches, la revue de code et la documentation technique.
+
+\section{Description et Formalisme des Données}
+
+Pour bien comprendre le fonctionnement de notre pipeline, il faut d'abord s'intéresser au format des données que nous avons reçues. Dans ce challenge, l'organisation des fichiers est toujours la même pour faciliter le traitement automatique. Chaque dataset est décomposé en trois fichiers distincts (.data, .solution, .type)
+
+Le fichier \texttt{.data} contient la matrice des caractéristiques (\textit{features}). Chaque ligne représente une instance unique et chaque colonne correspond à une variable descriptive. Ces données brutes présentent plusieurs caractéristiques clés que le pipeline doit gérer :
+
+\begin{itemize}
+    \item \textbf{Hétérogénéité} : les variables peuvent être de nature numérique ou catégorielle.
+    \item \textbf{Données manquantes} : le jeu de données n'est pas garanti complet ; des valeurs manquantes (\textit{NaN}) peuvent être présentes, nécessitant une stratégie d'imputation automatique.
+    \item \textbf{Absence d'étiquettes} : ce fichier ne contient strictement que les données d'entrée, sans la cible à prédire.
+\end{itemize}
+
+\subsection{La Référence (\texttt{.solution})}
+
+Le fichier \texttt{.solution} contient les cibles (\textit{targets}) correspondant aux observations du fichier \texttt{.data}. La structure de ce fichier définit implicitement la typologie du problème d'apprentissage supervisé :
+
+\begin{itemize}
+    \item \textbf{Régression} : une colonne de valeurs continues.
+    \item \textbf{Classification binaire} : une colonne de valeurs discrètes (0 ou 1).
+    \item \textbf{Classification multi-classes} : une colonne d'entiers ou une représentation encodée.
+    \item \textbf{Classification multi-étiquettes (\textit{multi-label})} : une matrice binaire où chaque ligne comporte plusieurs colonnes (par exemple : 1\;0\;1), indiquant l'appartenance simultanée d'une instance à plusieurs classes indépendantes.
+\end{itemize}
+
+Contrairement à un déploiement réel où les cibles de test sont inconnues, nous disposons ici de l'ensemble des solutions, permettant une évaluation locale complète des performances (via un découpage \textit{train/test}) avant la soumission finale.
+
+\subsection{Les Types (\texttt{.type})}
+
+Le fichier \texttt{.type} agit comme un descripteur de métadonnées essentiel pour l'automatisation du prétraitement. Il qualifie explicitement chaque colonne du fichier \texttt{.data} :
+
+\begin{itemize}
+    \item \textbf{Numerical} : désigne une variable quantitative (continue ou discrète) pouvant subir des opérations statistiques (moyenne, écart-type).
+    \item \textbf{Categorical} : désigne une variable qualitative (codes ou chaînes de caractères) nécessitant une transformation (\textit{encodage}) avant d'être interprétable par les algorithmes mathématiques.
+\end{itemize}
+
+Ce fichier permet au système AutoML d'appliquer automatiquement les stratégies de nettoyage et d'encodage adéquates sans avoir à inférer le type des données, réduisant ainsi le risque d'erreurs d'interprétation.
+
+\section{Chargement et Structuration des Jeux de Données}
+
+Le chargement des jeux de données constitue la première étape du pipeline AutoML. Cette phase vise à transformer des fichiers hétérogènes fournis par le challenge en une représentation interne unifiée, compatible avec l’ensemble des étapes ultérieures de nettoyage, de sélection de modèle et d’entraînement. Le module développé doit ainsi être capable de gérer à la fois des jeux de données tabulaires classiques et des jeux de données de type \textit{sparse}.
+
+\subsection{Chargement des cibles et gestion du multi-output}
+
+Les variables cibles sont chargées à partir du fichier \texttt{.solution}, lu sous forme de table sans en-tête. Deux cas sont distingués automatiquement en fonction du nombre de colonnes détectées :
+
+\begin{itemize}
+    \item \textbf{Sortie mono-dimensionnelle} : lorsque le fichier ne contient qu’une seule colonne, la tâche correspond à un problème supervisé standard (classification ou régression mono-sortie).
+    \item \textbf{Sortie multi-dimensionnelle} : lorsque plusieurs colonnes sont présentes, celles-ci sont interprétées comme des cibles multiples (\textit{multi-output}), couvrant à la fois les cas de régression multi-sortie et de classification multi-étiquettes.
+\end{itemize}
+
+Les colonnes cibles sont renommées de manière systématique (\texttt{target}, \texttt{target\_i}) afin de garantir une manipulation homogène dans l’ensemble du pipeline. Le choix du type précis de tâche (classification, régression, multi-label) est volontairement différé et sera déterminé ultérieurement lors de la phase de sélection automatique du modèle.
+
+\subsection{Détection et chargement des données explicatives}
+
+Le fichier \texttt{.data} peut correspondre à deux formats distincts :
+
+\begin{itemize}
+    \item un format tabulaire dense classique, où chaque ligne représente une instance et chaque colonne une variable explicative ;
+    \item un format \textit{sparse}, dans lequel chaque ligne est décrite par une liste de couples \texttt{indice:valeur}, représentant uniquement les variables non nulles.
+\end{itemize}
+
+La détection du format est réalisée automatiquement par l’analyse lexicale du fichier. La présence d’au moins un caractère \texttt{:} dans une ligne déclenche l’interprétation du fichier comme un jeu de données sparse.
+
+Dans ce cas, les lignes sont parcourues afin d’extraire les indices et valeurs associés à chaque instance. Le nombre total de variables est estimé dynamiquement à partir de l’indice maximal observé. Les données sont ensuite reconstruites sous forme d’une matrice dense, initialisée à zéro, puis complétée avec les valeurs présentes dans la représentation sparse.
+
+\subsection{Choix de représentation et justification}
+
+Bien que le format sparse permette théoriquement des gains substantiels en mémoire et en temps de calcul, nous avons fait le choix assumé de convertir systématiquement les données en \texttt{DataFrame} \textit{pandas} denses. Ce choix répond à plusieurs motivations :
+
+\begin{itemize}
+    \item assurer une compatibilité totale avec les étapes de prétraitement, de nettoyage et de profilage automatique des données ;
+    \item simplifier l’implémentation du pipeline en s’appuyant sur les abstractions vues en cours et largement utilisées dans l’écosystème \textit{scikit-learn} ;
+    \item garantir une interface uniforme entre les jeux de données, indépendamment de leur format d’origine.
+\end{itemize}
+
+Cette décision peut induire un surcoût computationnel pour certains jeux de données très creux, mais elle permet de maintenir une architecture logicielle cohérente, lisible et robuste dans le cadre pédagogique du projet.
+
+
+\section{Méthodologie de Nettoyage et Prétraitement des Données}
+
+Le développement du module de prétraitement a suivi une approche itérative, guidée par la confrontation entre les besoins théoriques de qualité de données et les contraintes réelles de performance sur le cluster.
+
+\subsection{De l’approche naïve à l’automatisation}
+
+Dans la phase initiale du projet, nous avons adopté une stratégie exploratoire \textit{naïve}. L'objectif était d'obtenir rapidement un pipeline fonctionnel (\textit{baseline}) en appliquant des règles de nettoyage simples, telles que la suppression systématique des lignes contenant des valeurs manquantes. Bien que rapide, cette méthode entraînait une perte d'information critique sur les jeux de données lacunaires.
+
+Pour pallier ce défaut, nous nous sommes tournés vers \textit{ydata-profiling}, un outil puissant d'analyse exploratoire automatisée. Cette librairie génère un profil complet du jeu de données, détectant automatiquement les types d'inférence, les valeurs manquantes, les distributions statistiques et les corrélations complexes.
+
+Cependant, l'intégration systématique de cet outil a révélé un goulot d'étranglement majeur. Sur les jeux de données à haute dimensionnalité (plusieurs milliers de colonnes), le coût computationnel — spécifiquement le calcul de la matrice de corrélation en $O(n^2)$ — devenait prohibitif. Les temps d'exécution explosaient, ralentissant considérablement le pipeline global.
+
+Face à ce constat, nous avons développé une stratégie optimisée et hybride, capable de tirer parti de la puissance de \textit{ydata-profiling} tout en garantissant la scalabilité.
+
+\subsection{Stratégie Adaptative Implémentée}
+
+Notre solution finale repose sur une logique conditionnelle qui adapte la profondeur du nettoyage à la complexité du \textit{dataset}.
+
+\subsubsection{Gestion de la Haute Dimensionnalité (\textit{Safe Mode})}
+
+Lorsque le nombre de colonnes dépasse un seuil critique (fixé à 2000), le pipeline bascule automatiquement en \textit{Safe Mode}. Dans ce mode, le profilage coûteux est désactivé au profit d'opérations vectorisées natives via \textit{pandas}, beaucoup plus rapides :
+
+\begin{itemize}
+    \item \textbf{Nettoyage minimal} : suppression des colonnes constantes (variance nulle).
+    \item \textbf{Imputation rapide} : les valeurs manquantes sont comblées par la médiane (numérique) ou le mode (catégoriel) sans analyse contextuelle approfondie.
+\end{itemize}
+
+Cette approche permet de traiter des jeux de données massifs sans provoquer de dépassement de mémoire (\textit{Out Of Memory}) ou de temps limite.
+
+\subsubsection{Analyse Optimisée (\textit{Standard Mode})}
+
+Pour les jeux de données de taille raisonnable, nous utilisons \textit{ydata-profiling} en mode optimisé (\texttt{minimal=True}). Ce paramétrage désactive les calculs graphiques superflus tout en conservant les métadonnées essentielles pour un nettoyage fin :
+
+\paragraph{Traitement des Valeurs Manquantes}
+\begin{itemize}
+    \item \textbf{Suppression ($>$ 30\%)} : les variables trop lacunaires sont éliminées.
+    \item \textbf{Imputation ($\leq$ 30\%)} : remplacement par la médiane (numérique) ou le mode (catégoriel).
+\end{itemize}
+
+\paragraph{Réduction de la Multicolinéarité}
+Grâce au profilage, nous identifions les paires de variables présentant une corrélation de Pearson supérieure à 0.85. Pour éviter la redondance d'information, l'une des deux variables est supprimée, prioritairement celle ayant le plus de valeurs manquantes.
+
+Cette méthodologie assure un compromis optimal entre la robustesse statistique nécessaire à l'AutoML et l'efficacité computationnelle requise par le challenge.
+
+\section{Détection automatique du type de tâche et sélection du modèle}
+
+Une fois les données chargées et nettoyées, le pipeline AutoML procède à une étape centrale : la détermination automatique du type de tâche d’apprentissage, suivie de la sélection du modèle le plus adapté parmi un ensemble de candidats. Cette phase vise à éliminer toute intervention manuelle tout en garantissant une adaptation raisonnable aux caractéristiques du jeu de données.
+
+\subsection{Détection du type de tâche}
+
+La détection du type de tâche repose exclusivement sur l’analyse de la structure et du type des variables cibles. Aucune information externe n’est requise, ce qui permet une automatisation complète du processus.
+
+Trois cas sont distingués :
+
+\begin{itemize}
+    \item \textbf{Classification multi-étiquettes (\textit{multi-label})} : lorsque la cible est constituée de plusieurs colonnes, la tâche est interprétée comme un problème multi-sortie. Ce cas correspond typiquement à des situations où chaque instance peut appartenir simultanément à plusieurs classes indépendantes.
+    
+    \item \textbf{Classification} : lorsque la cible est mono-dimensionnelle et de type catégoriel (chaîne de caractères, catégorie explicite) ou présente un nombre limité de valeurs distinctes (seuil fixé empiriquement à 20), le problème est considéré comme une classification.
+    
+    \item \textbf{Régression} : lorsque la cible est numérique continue et présente une forte cardinalité, la tâche est traitée comme un problème de régression.
+\end{itemize}
+
+Cette approche heuristique, bien que simple, s’est révélée suffisante dans le cadre du challenge, où les jeux de données respectent des conventions relativement homogènes.
+
+\subsection{Gestion du cas multi-output}
+
+Dans le cas des tâches multi-sorties, le pipeline s’appuie sur une stratégie générique fondée sur le méta-modèle \texttt{MultiOutputClassifier}. Celui-ci encapsule un classificateur de base — en l’occurrence un arbre de décision — afin d’apprendre indépendamment chaque sortie cible.
+
+Ce choix présente plusieurs avantages :
+\begin{itemize}
+    \item compatibilité avec un large éventail de jeux de données multi-labels ;
+    \item simplicité d’implémentation et robustesse ;
+    \item intégration transparente dans le reste du pipeline AutoML.
+\end{itemize}
+
+Dans ce cas précis, aucune comparaison de modèles n’est effectuée, le modèle étant directement sélectionné afin de garantir la stabilité du processus.
+
+\subsection{Espace de modèles candidats}
+
+Pour les tâches de classification et de régression mono-sortie, un ensemble de modèles candidats est défini à l’avance, en s’appuyant sur des algorithmes classiques et éprouvés de l’écosystème \textit{scikit-learn}, ainsi que sur des bibliothèques spécialisées telles que \textit{XGBoost} et \textit{LightGBM}.
+
+\paragraph{Classification}
+Les modèles de classification incluent notamment :
+\begin{itemize}
+    \item k plus proches voisins (KNN),
+    \item régression logistique,
+    \item forêts aléatoires,
+    \item AdaBoost,
+    \item Naive Bayes gaussien,
+    \item classifieur Ridge,
+    \item modèles à base de gradient boosting (\textit{XGBoost}, \textit{LightGBM}).
+\end{itemize}
+
+\paragraph{Régression}
+Pour la régression, l’espace de recherche comprend :
+\begin{itemize}
+    \item régression linéaire et Ridge,
+    \item forêts aléatoires,
+    \item AdaBoost,
+    \item modèles de gradient boosting (\textit{XGBoost}, \textit{LightGBM}).
+\end{itemize}
+
+Ces modèles pour la plupart vus en cours ont été choisis pour leur complémentarité, leur robustesse et leur capacité à traiter des données tabulaires hétérogènes.
+
+\subsection{Procédure de sélection du modèle}
+
+La sélection du modèle repose sur une évaluation comparative via validation croisée. Chaque modèle candidat est évalué sur un sous-ensemble des données à l’aide d’une validation croisée à trois plis.
+
+Afin de maîtriser le coût computationnel sur les grands jeux de données, une stratégie de sous-échantillonnage est appliquée lorsque le nombre d’instances dépasse un seuil fixé à 5000. Dans ce cas, un échantillon aléatoire est utilisé pour la phase de sélection, sans impact sur l’entraînement final du modèle retenu.
+
+Les métriques utilisées dépendent du type de tâche :
+\begin{itemize}
+    \item \textbf{Accuracy} pour les problèmes de classification,
+    \item \textbf{coefficient de détermination $R^2$} pour les problèmes de régression.
+\end{itemize}
+
+Le modèle obtenant le meilleur score moyen est sélectionné pour la suite du pipeline.
+
+\section{Choix des hyper-paramètres}
+
+    L’optimisation des hyper-paramètres constitue une étape clé du pipeline \textit{AutoML}, permettant d’améliorer significativement les performances des modèles. Afin de s’adapter à différents contextes d’utilisation et de complexité, plusieurs méthodes d’optimisation sont proposées. \\
+
+    La coexistence de ces trois stratégies d’optimisation permet au package AutoML de s’adapter à différents scénarios d’utilisation, allant d’une optimisation rapide et simple à une recherche approfondie de performances maximales.
+    
+    \subsection{Stratégies d’optimisation}
+    
+    Le choix de la méthode d’optimisation est contrôlé par le paramètre \texttt{train\_method}, qui associe chaque stratégie à une fonction dédiée :
+    
+    \begin{itemize}
+        \item \textbf{\texttt{"h"} :} optimisation heuristique par recherche sur grille (\textit{Grid Search})
+        \item \textbf{\texttt{"g"} :} optimisation par descente de gradient
+        \item \textbf{\texttt{"l"} :} optimisation via une bibliothèque spécialisée (\textit{Optuna})
+    \end{itemize}
+    
+    Cette approche permet de proposer un compromis entre simplicité, temps de calcul et qualité des modèles obtenus.
+    
+    \subsection{Optimisation heuristique (Grid Search)}
+    
+    La méthode heuristique repose sur une recherche exhaustive sur une grille prédéfinie d’hyper-paramètres, à l’aide de la validation croisée.  
+    Pour chaque type de modèle, un espace de recherche spécifique est défini (par exemple pour Random Forest, XGBoost ou LightGBM) La métrique d’évaluation est choisie dynamiquement selon le type de tâche :
+    \begin{itemize}
+        \item F1-score macro pour les problèmes de classification
+        \item Coefficient de détermination $R^2$ pour les problèmes de régression
+    \end{itemize}
+    
+    Cette méthode est robuste et simple à mettre en oeuvre, mais peut devenir coûteuse en temps de calcul lorsque l’espace de recherche est large.
+    
+    \subsection{Optimisation par descente de gradient}
+    
+    La méthode par descente de gradient est spécifiquement conçue pour les modèles compatibles avec l’apprentissage incrémental, tels que \texttt{SGDClassifier} et \texttt{SGDRegressor}. Elle repose sur l’utilisation de la méthode \texttt{partial\_fit} et permet :
+    \begin{itemize}
+        \item un apprentissage par mini-lots (\textit{mini-batch})
+        \item un contrôle explicite du taux d’apprentissage
+        \item un nombre configurable d’époques
+    \end{itemize}
+    
+    Lorsque le modèle sélectionné n’est pas compatible avec ce type d’optimisation, la méthode est ignorée et le modèle est conservé sans modification. Cette stratégie offre une optimisation efficace pour les grands jeux de données tout en limitant la consommation mémoire.
+    
+    \subsection{Optimisation via une bibliothèque spécialisée}
+    
+    La troisième approche repose sur l’utilisation de la bibliothèque \textit{Optuna}, qui implémente des algorithmes d’optimisation bayésienne pour l’exploration intelligente de l’espace des hyper-paramètres.
+    
+    Pour chaque type de modèle (Random Forest, XGBoost, LightGBM, régression logistique), un espace de recherche spécifique est défini.  
+    Chaque configuration candidate est évaluée à l’aide d’une validation croisée, et l’objectif est de maximiser une métrique adaptée au type de tâche. Cette méthode permet :
+    \begin{itemize}
+        \item une exploration plus efficace de grands espaces de recherche
+        \item une meilleure convergence vers des configurations performantes
+        \item une réduction du nombre d’essais nécessaires par rapport à une recherche exhaustive
+    \end{itemize}
+    
+    En contrepartie, elle introduit une dépendance externe et un coût computationnel potentiellement plus élevé.
+
+\section{Évaluation des performances et comparaison aux baselines}
+
+L’évaluation des performances constitue l’étape finale du pipeline AutoML. Elle vise à mesurer objectivement la qualité prédictive du modèle sélectionné, tout en fournissant des points de comparaison simples permettant de contextualiser les résultats obtenus. Cette évaluation est réalisée de manière entièrement automatique et s’adapte au type de tâche détecté (classification, régression ou classification multi-étiquettes).
+
+\subsection{Métriques d’évaluation}
+
+Le choix des métriques dépend de la nature du problème d’apprentissage supervisé.
+
+\paragraph{Classification et classification multi-étiquettes}
+Pour les tâches de classification, les métriques suivantes sont calculées :
+
+\begin{itemize}
+    \item \textbf{Accuracy}, mesurant la proportion globale de prédictions correctes ;
+    \item \textbf{F1-score} décliné en moyennes micro, macro et pondérée, afin de tenir compte des déséquilibres de classes ;
+    \item \textbf{Précision} et \textbf{rappel}, également évalués selon des moyennes micro et macro.
+\end{itemize}
+
+Ces métriques permettent d’obtenir une vision à la fois globale et détaillée du comportement du modèle, en particulier dans les contextes multi-classes ou multi-labels.
+
+\paragraph{Régression}
+Pour les tâches de régression, l’évaluation repose sur des métriques continues standard :
+
+\begin{itemize}
+    \item \textbf{Erreur quadratique moyenne (MSE)} ;
+    \item \textbf{Racine de l’erreur quadratique moyenne (RMSE)} ;
+    \item \textbf{Erreur absolue moyenne (MAE)} ;
+    \item \textbf{Coefficient de détermination $R^2$}.
+\end{itemize}
+
+Ces indicateurs permettent d’évaluer à la fois l’erreur moyenne de prédiction et la capacité du modèle à expliquer la variance des données.
+
+\subsection{Génération de baselines}
+
+Afin de contextualiser les performances du modèle sélectionné, deux baselines simples sont systématiquement générées :
+
+\begin{itemize}
+    \item \textbf{Baseline aléatoire} : les prédictions sont générées de manière aléatoire à partir de la distribution observée des cibles ;
+    \item \textbf{Baseline constante} : prédiction d’une valeur fixe (classe majoritaire ou moyenne des cibles selon le type de tâche).
+\end{itemize}
+
+Ces baselines constituent des points de référence faibles mais essentiels, permettant de vérifier que le modèle appris capture effectivement des régularités non triviales dans les données.
+
+\subsection{Comparaison et agrégation des résultats}
+
+Les performances du modèle AutoML sont comparées directement à celles des baselines à l’aide des mêmes métriques. Pour les tâches de classification, l’accent est mis sur l’accuracy et le F1-score macro, tandis que pour la régression, le coefficient $R^2$ et les erreurs moyennes sont privilégiés.
+
+Dans le cas de la régression, les scores $R^2$ négatifs obtenus par certaines baselines sont tronqués à zéro afin de faciliter l’interprétation et la comparaison.
+
+L’ensemble des métriques est regroupé dans une structure unifiée, puis affiché sous forme tabulaire afin de faciliter l’analyse et la comparaison entre modèles et jeux de données.
+
+\subsection{Discussion}
+
+Cette stratégie d’évaluation permet d’obtenir une mesure robuste et interprétable des performances du pipeline AutoML, tout en restant compatible avec des tâches variées. Bien que reposant sur des métriques classiques, elle fournit un cadre cohérent pour analyser la capacité de généralisation des modèles et justifier leur sélection dans le cadre du challenge.
+
+
+\section{Interface publique}
+
+    L’interface publique du package \textit{AutoML} regroupe l’ensemble des fonctions et méthodes accessibles à l’utilisateur final. Elle définit le contrat d’utilisation du package et masque les détails d’implémentation internes. \\
+
+    Elle propose deux modes d’utilisation :
+    une utilisation \emph{haut niveau}, entièrement automatisée, et
+    une utilisation \emph{bas niveau}, offrant un contrôle plus fin sur les étapes d’apprentissage et d’évaluation.
+    
+    \subsection{Fonctions de haut niveau}
+    Ce mode d’utilisation permet d’exécuter automatiquement l’ensemble du pipeline \textit{AutoML} via une unique méthode.
+    
+    \begin{itemize}
+        \item \textbf{\texttt{load\_data(data\_path, solution\_path, dataset\_name)} :} 
+        charge le jeu de données d’apprentissage à partir du chemin \texttt{data\_path} ainsi que les solutions associées depuis \texttt{solution\_path}. Le paramètre \texttt{dataset\_name} permet d’identifier le jeu de données utilisé. Cette méthode effectue également les étapes initiales de validation et de préparation des données.
+
+        
+        \item \textbf{\texttt{run(data\_path, solution\_path, dataset\_name, train\_method)} :} 
+        exécute l’ensemble du pipeline AutoML. Cette méthode charge les données, entraîne automatiquement les modèles selon la stratégie définie par \texttt{train\_method}, évalue leurs performances et sélectionne le meilleur modèle obtenu. Elle constitue la méthode principale d’utilisation du package.
+    \end{itemize}
+    
+    \subsection{Utilisation bas niveau}
+    Ce mode d’utilisation offre un contrôle explicite sur les différentes étapes du processus d’apprentissage automatique.
+    
+    \begin{itemize}
+        \item \textbf{\texttt{fit(data\_path, solution\_path, train\_method)} :} entraîne le modèle AutoML sur les données d’apprentissage fournies. Cette méthode déclenche la recherche automatique du meilleur modèle et ajuste ses paramètres.
+        
+        \item \textbf{\texttt{predict(test\_path)} :} génère des prédictions à partir de nouvelles données en utilisant le modèle entraîné.
+        
+        \item \textbf{\texttt{eval()} :} évalue les performances du modèle sur un jeu de données de test à l’aide de métriques adaptées au problème (classification ou régression).
+    \end{itemize}
+
+
+%%================================================================
+%% Note : si l'on préfère éviter de factoriser les crossrefs :
+%% bibtex -min-crossrefs 99 taln-exemple
+%%================================================================
+%%\bibliographystyle{jeptaln2024}
+%%\bibliography{biblio}
+%%\nocite{TALN2015,LaigneletRioult09,LanglaisPatry07,SeretanWehrli07}
+
+%%================================================================
+\end{document}

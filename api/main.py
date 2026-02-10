@@ -37,12 +37,13 @@ def get_db():
     finally:
         db.close()
 
+""" #TODO: limiter la création de comptes pour éviter les abus, ou ajouter une route d'admin pour créer les comptes manuellement
 @app.post("/register")
 def register(username: str = Body(...), password: str = Body(...)):
     user = create_user(username, password)
     token = create_access_token({"sub": user.username})
     return {"access_token": token, "token_type": "bearer"}
-
+"""
 
 @app.post("/login")
 def login(username: str = Body(...), password: str = Body(...)):

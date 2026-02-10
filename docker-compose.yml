@@ -2,10 +2,10 @@ version: "3.9"
 
 services:
   api:
-    image: ghcr.io/shrooml-team/automl:latest
+    image: ghcr.io/shrooml-team/automl:${IMAGE_TAG:-latest}
     container_name: automl-api
     ports:
-      - "63002:8000"
+      - "${HOST_PORT:-63002}:8000"
     volumes:
       - users_db:/app/db/
     environment:

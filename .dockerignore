@@ -5,3 +5,10 @@ __pycache__/
 .env
 *.sqlite
 tmp_automl/
+docs/
+tests/
+.git/
+.gitignore
+.DS_Store
+.vscode/
+.idea/

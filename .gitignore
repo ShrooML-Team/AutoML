@@ -1,0 +1,33 @@
+# DB files
+*.db
+*.sqlite3
+# Python bytecode files
+__pycache__/
+*.pyc
+# Environment files
+.env
+venv/
+# Logs
+logs/
+*.log
+# IDE files
+.idea/
+.vscode/
+# Static files
+staticfiles/
+# Media files
+media/
+# Coverage reports
+htmlcov/
+.coverage
+# MacOS files
+.DS_Store
+# Windows files
+Thumbs.db
+# Backup files
+*.bak
+*.tmp
+
+# AutoML temporary files
+/api/tmp_auto_ml/
+

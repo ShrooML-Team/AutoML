@@ -62,7 +62,7 @@ def model_selector(dataset: pd.DataFrame, target_column: str = None, fast_mode: 
     if y.dtype == 'object' or y.dtype.name == 'category' or len(y.unique()) <= 20:
         task_type = 'classification'
         models_dict = CLASSIFICATION_MODELS
-        scoring = 'accuracy'
+        scoring = 'f1_micro'
     else:
         task_type = 'regression'
         models_dict = REGRESSION_MODELS

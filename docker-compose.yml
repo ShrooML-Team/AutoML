@@ -2,10 +2,26 @@ version: "3.9"
 
 services:
   api:
-    build: .
+    image: ghcr.io/shrooml-team/automl:latest
+    container_name: automl-api
     ports:
-      - "8000:8000"
+      - "63002:8000"
     volumes:
-      - ./users.db:/app/users.db
+      - users_db:/app/db/
     environment:
       - SECRET_KEY=iloveshrooms
+    restart: unless-stopped
+    
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '8'
+          memory: 8G
+        reservations:
+          cpus: '4'
+          memory: 4G
+
+volumes:
+  users_db:
+    driver: local

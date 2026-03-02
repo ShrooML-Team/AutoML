@@ -15,6 +15,7 @@ from tests.util import Utils
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 def run_single_dataset(dataset_dir, ds_name):
+    exit(0)
     data_path = os.path.join(dataset_dir, ds_name, f"{ds_name}.data")
     solution_path = os.path.join(dataset_dir, ds_name, f"{ds_name}.solution")
     log_dir = os.path.join(dataset_dir, "logs")

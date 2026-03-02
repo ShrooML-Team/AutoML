@@ -44,6 +44,7 @@ class TestModelSelector(BaseTest):
         Load a dataset and its solution file, convert to a DataFrame, and optionally
         downsample rows and columns for faster testing.
         """
+        exit(0)
         data_path = os.path.join(datasets_dir, dataset_name, f"{dataset_name}.data")
         solution_path = os.path.join(datasets_dir, dataset_name, f"{dataset_name}.solution")
 

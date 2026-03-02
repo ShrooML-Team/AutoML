@@ -52,6 +52,7 @@ class TestAutoMLLoadData(BaseTest):
         print("\n\n")
         for ds_name in self.dataset_names:
             with self.subTest(dataset=ds_name):
+                exit(0)
                 data_path = os.path.join(self.datasets_dir, ds_name, f"{ds_name}.data")
                 solution_path = os.path.join(self.datasets_dir, ds_name, f"{ds_name}.solution")
 

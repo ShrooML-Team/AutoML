@@ -2,7 +2,7 @@ import os
 import sys
 import time
 import unittest
-
+import pytest
 import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
@@ -25,6 +25,7 @@ class TestModelSelector(BaseTest):
     """
 
     @classmethod
+    @pytest.mark.skip(reason="Pas de répertoire pour tester")
     def setUpClass(cls):
         """
         Load all datasets into memory and store them in a dictionary for testing.
@@ -39,6 +40,7 @@ class TestModelSelector(BaseTest):
             cls.dataframes[ds_name] = df
 
     @staticmethod
+    @pytest.mark.skip(reason="Pas de répertoire pour tester")
     def _load_dataset(datasets_dir, dataset_name):
         """
         Load a dataset and its solution file, convert to a DataFrame, and optionally
@@ -88,6 +90,7 @@ class TestModelSelector(BaseTest):
         print(f"{dataset_name}: X shape = {X.shape}, non-zero entries = {(X != 0).sum().sum()}")
         return df
 
+    @pytest.mark.skip(reason="Pas de répertoire pour tester")
     def test_all_datasets_model_selection(self):
         """
         Test model selection on all datasets.

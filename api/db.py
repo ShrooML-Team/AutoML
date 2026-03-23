@@ -1,6 +1,10 @@
 # api/db.py
 from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.orm import declarative_base, sessionmaker
+import os
+
+DB_DIR = "/app/db"
+os.makedirs(DB_DIR, exist_ok=True)
 
 DATABASE_URL = "sqlite:////app/db/users.db"
 

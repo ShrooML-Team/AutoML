@@ -3,7 +3,7 @@ import pandas as pd
 from automl.automl import AutoML
 
 _model: AutoML | None = None
-_preprocessing_pipeline = None  # ✅ Sauvegarder le pipeline
+_preprocessing_pipeline = None  
 
 BASE_TMP_DIR = os.path.join(os.path.dirname(__file__), "tmp_automl")
 os.makedirs(BASE_TMP_DIR, exist_ok=True)
